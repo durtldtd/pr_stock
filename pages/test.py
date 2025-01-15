@@ -158,16 +158,9 @@ if 'ta_ymd' in filtered_df.columns:
     st.plotly_chart(fig4, use_container_width=True)
 
 
-# 5. 시간대별 데이터 집계 (선과 막대) -> 서로 다른 두가지 데이터 비교
-import streamlit as st
-import pandas as pd
-import plotly.express as px
+
 
 # 5. 시간대별 데이터 집계 (선과 막대) -> 서로 다른 두가지 데이터 비교
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-
 # 시간대별 레이블 정의
 hour_labels = {
     '01': '00:00~06:59', '02': '07:00~08:59', '03': '09:00~10:59',
