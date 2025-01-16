@@ -2,16 +2,18 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from main import get_combined_sampled_data  # 메인 코드에서 함수 가져오기
 
-# 페이지 설정 (스크립트의 첫 번째 명령어로 이동)
-st.set_page_config(page_title="대분류 및 소분류 관련 그래프 출력", layout="wide")
+st.set_page_config(page_title="업종 대분류 및 소분류 분석", layout="wide")
+st.title(":bar_chart: 업종 분석 도구")
+st.markdown(
+    """
+    선택한 업종의 대분류 및 소분류에 대한 다양한 데이터를 확인하고 분석할 수 있습니다.
+    데이터를 시각적으로 이해하기 쉽게 정리하였습니다.
+    """
+)
 
-# 페이지 제목
-st.title("📊 업종대분류 및 소분류 관련 정보")
-st.markdown("이 페이지에서는 업종대분류 및 소분류에 관련된 다양한 내용을 제공합니다.")
-
-# 캐시된 데이터 가져오기
 sampled_df = get_combined_sampled_data()
 
 if not sampled_df.empty:
@@ -50,6 +52,7 @@ else:
 
 # 대분류 관련 정보
 st.header("📊 업종대분류 관련 정보")
+st.markdown("## 🔍 데이터 필터링")
 # 대분류 관련 데이터 처리 및 시각화
 unique_main_categories = df["card_tpbuz_nm_1"].dropna().unique()
 selected_main = st.selectbox("비교하고 싶은 업종 대분류를 선택하세요:", sorted(unique_main_categories))
@@ -59,7 +62,7 @@ st.header("📊 업종소분류 관련 정보")
 # 1. 해당 대분류에 속하는 소분류 목록 추출 및 선택 (최대 3개)
 available_subcategories = df[df["card_tpbuz_nm_1"] == selected_main]["card_tpbuz_nm_2"].dropna().unique()
 selected_subcategories = st.multiselect(
-    f"{selected_main}에 속하는 업종 소분류를 최대 3개 선택하세요:",
+    f"## 🔍 {selected_main}에 속하는 업종 소분류를 최대 3개 선택하세요:",
     options=sorted(available_subcategories),
     default=[sorted(available_subcategories)[0]] if len(available_subcategories) > 0 else None,
     max_selections=3
@@ -87,7 +90,7 @@ monthly_sales = (
     .reset_index()
 )
 fig1 = px.line(monthly_sales, x='year_month', y='amt', color='card_tpbuz_nm_2',
-               title="선택한 업종 소분류 별 월별 총 매출 금액 추이",
+               title="📈 선택한 업종 소분류 별 월별 총 매출 금액 추이",
                labels={'year_month': '년-월', 'amt': '매출 금액', 'card_tpbuz_nm_2': '업종 소분류'})
 st.plotly_chart(fig1, use_container_width=True)
 
@@ -99,25 +102,50 @@ gender_sales = (
 )
 fig2 = px.pie(gender_sales, names='sex', values='amt', color='sex',
               facet_col='card_tpbuz_nm_2', 
-              title="선택한 업종 소분류 별 성별 매출 비율",
+              title="🧑‍🤝‍🧑 선택한 업종 소분류 별 성별 매출 비율",
               color_discrete_map={'M': 'blue', 'F': 'pink'})
 st.plotly_chart(fig2, use_container_width=True)
 
-# 3. 연령대별 매출 비교
+#3
+age_mapping = {
+    1: '10대 이하', 
+    2: '10대', 
+    3: '20대', 
+    4: '30대', 
+    5: '40대', 
+    6: '50대', 
+    7: '60대 이상'
+}
+
 if 'age' in filtered_df.columns:
-    # bins와 labels의 길이가 일치하도록 수정
-    filtered_df['age_group'] = pd.cut(filtered_df['age'], bins=[0, 20, 30, 40, 50, 60],
-                                  labels=['20대 이하', '30대', '40대', '50대', '60대 이상'], right=False)
+    # 연령대 매핑
+    filtered_df['age_group'] = filtered_df['age'].map(age_mapping)
+
+
+    # 연령대별 매출 데이터 집계
     age_sales = (
         filtered_df.groupby(['age_group', 'card_tpbuz_nm_2'])['amt']
         .sum()
         .reset_index()
     )
-    fig3 = px.bar(age_sales, x='age_group', y='amt', color='age_group',
-                  title="선택한 업종 소분류 별 연령대별 매출 금액 비교",
-                  labels={'age_group': '연령대', 'amt': '매출 금액', 'card_tpbuz_nm_2': '업종 소분류'},
-                  facet_col='card_tpbuz_nm_2')
+
+    # 그래프 생성
+    fig3 = px.bar(
+        age_sales, 
+        x='age_group', 
+        y='amt', 
+        color='age_group',
+        title="👥 선택한 업종 소분류 별 연령대별 매출 금액 비교",
+        labels={'age_group': '연령대', 'amt': '매출 금액', 'card_tpbuz_nm_2': '업종 소분류'},
+        facet_col='card_tpbuz_nm_2'
+    )
     st.plotly_chart(fig3, use_container_width=True)
+
+else:
+    st.write("데이터프레임에 'age' 열이 존재하지 않습니다.")
+
+
+    
 #4
 if 'ta_ymd' in filtered_df.columns:
     # 날짜 형식으로 변환 (필요한 경우)
@@ -152,53 +180,100 @@ if 'ta_ymd' in filtered_df.columns:
 
     # 그래프 그리기
     fig4 = px.bar(weekday_sales, x='weekday', y='amt', color='weekday',
-                  title="선택한 업종 소분류 별 요일별 매출 금액 비교",
+                  title="📅 선택한 업종 소분류 별 요일별 매출 금액 비교",
                   labels={'weekday': '요일', 'amt': '매출 금액', 'card_tpbuz_nm_2': '업종 소분류'},
                   facet_col='card_tpbuz_nm_2')
     st.plotly_chart(fig4, use_container_width=True)
+   # 제품 & 성별 매출
+st.header("🔍  제품 & 성별 매출")
+category = st.multiselect(
+    "분석할 업종 소분류를 선택하세요:",
+    options=df["card_tpbuz_nm_2"].unique(),
+    default=df["card_tpbuz_nm_2"].unique()[:3]  # 기본적으로 처음 3개 선택
+)
 
+if not category:
+    st.warning("적어도 하나의 업종 소분류를 선택해야 합니다.")
+    st.stop()
 
+grouped_data = df.loc[df['card_tpbuz_nm_2'].isin(category)].groupby(['card_tpbuz_nm_2', 'sex'])['amt'].sum().reset_index()
+products = grouped_data['card_tpbuz_nm_2'].unique()
+fig_gender = make_subplots(
+    rows=1,
+    cols=len(products),
+    subplot_titles=products,
+    specs=[[{'type': 'domain'}] * len(products)]
+)
 
-
-# 5. 시간대별 데이터 집계 (선과 막대) -> 서로 다른 두가지 데이터 비교
-# 시간대별 레이블 정의
-hour_labels = {
-    '01': '00:00~06:59', '02': '07:00~08:59', '03': '09:00~10:59',
-    '04': '11:00~12:59', '05': '13:00~14:59', '06': '15:00~16:59',
-    '07': '17:00~18:59', '08': '19:00~20:59', '09': '21:00~22:59',
-    '10': '23:00~23:59'
-}
-
-# 5. 시간대별 데이터 집계 (선과 막대) -> 서로 다른 두가지 데이터 비교
-if 'ta_ymd' in filtered_df.columns:
-    # 'ta_ymd' 컬럼을 datetime 형식으로 변환
-    filtered_df['ta_ymd'] = pd.to_datetime(filtered_df['ta_ymd'], errors='coerce')
-
-    # 시간 추출 (1~10만 있음)
-    filtered_df['hour'] = filtered_df['ta_ymd'].dt.hour
-
-    # 시간대별 레이블을 'hour' 컬럼에 매핑
-    filtered_df['hour_label'] = filtered_df['hour'].astype(str).map(hour_labels)
-
-    # 'hour_label' 값이 비어있는 경우 처리
-    if filtered_df['hour_label'].isnull().any():
-        st.warning("시간대 레이블이 적용되지 않은 데이터가 있습니다.")
-        filtered_df = filtered_df.dropna(subset=['hour_label'])  # 비어있는 hour_label 제거
-
-    # 선택한 업종 소분류별 시간대별 매출 금액 집계
-    hour_sales = (
-        filtered_df.groupby(['hour_label', 'card_tpbuz_nm_2'])['amt']
-        .sum()
-        .reset_index()
+for i, product in enumerate(products):
+    product_data = grouped_data[grouped_data['card_tpbuz_nm_2'] == product]
+    fig_gender.add_trace(
+        go.Pie(
+            labels=product_data['sex'],
+            values=product_data['amt'],
+            name=product,
+            marker=dict(
+                colors=['lightblue' if s == 'M' else 'lightpink' for s in product_data['sex']]
+            )
+        ),
+        row=1,
+        col=i + 1
     )
 
-    # hour_sales가 비어있는지 확인
-    if hour_sales.empty:
-        st.warning("시간대별 매출 데이터가 없습니다.")
-    else:
-        # 그래프 그리기 (시간대별 매출 금액을 바 차트로 시각화)
-        fig5 = px.bar(hour_sales, x='hour_label', y='amt', color='card_tpbuz_nm_2', barmode='group',
-                      title="선택한 업종 소분류 별 시간대별 매출 금액",
-                      labels={'hour_label': '시간대', 'amt': '매출 금액', 'card_tpbuz_nm_2': '업종 소분류'})
+fig_gender.update_layout(
+    title="제품별 성별 매출 비율",
+    showlegend=True,
+    legend_title_text='성별',
+    height=400,
+    width=250 * len(products)
+)
+st.plotly_chart(fig_gender, use_container_width=False)
 
-        st.plotly_chart(fig5, use_container_width=True)
+# 제품 & 나이대별 매출
+st.header("🔍  제품 & 나이대별 매출")
+grouped_data2 = df.loc[df['card_tpbuz_nm_2'].isin(category)].groupby(['card_tpbuz_nm_2', 'age'])['amt'].sum().reset_index()
+grouped_data2['age'] = grouped_data2['age'].astype(str)
+products_age = grouped_data2['card_tpbuz_nm_2'].unique()
+
+color_map = {
+    '1': 'lightblue',
+    '2': 'blue',
+    '3': 'green',
+    '4': 'orange',
+    '5': 'red',
+    '6': 'purple',
+    '7': 'pink',
+    '8': 'yellow',
+    '9': 'brown',
+    '10': 'grey',
+    '11': 'cyan'
+}
+
+fig_age = make_subplots(
+    rows=1,
+    cols=len(products_age),
+    subplot_titles=products_age,
+    specs=[[{'type': 'domain'}] * len(products_age)]
+)
+
+for i, product in enumerate(products_age):
+    product_data = grouped_data2[grouped_data2['card_tpbuz_nm_2'] == product]
+    colors = [color_map.get(age, 'gray') for age in product_data['age']]
+    fig_age.add_trace(
+        go.Pie(
+            labels=product_data['age'],
+            values=product_data['amt'],
+            name=product,
+            marker=dict(colors=colors)
+        ),
+        row=1,
+        col=i + 1
+    )
+
+fig_age.update_layout(
+    title="제품별 나이대별 매출 비율",
+    showlegend=True,
+    height=400,
+    width=250 * len(products_age),
+)
+st.plotly_chart(fig_age, use_container_width=False)
