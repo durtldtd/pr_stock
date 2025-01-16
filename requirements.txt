@@ -62,3 +62,5 @@ virtualenv==20.28.0
 webencodings==0.5.1
 wheel==0.45.1
 yt-dlp==2024.12.23
+openai==1.59.7
+python-dotenv==1.0.1
