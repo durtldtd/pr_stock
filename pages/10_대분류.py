@@ -3,10 +3,9 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from main import get_combined_sampled_data  # 메인 코드에서 함수 가져오기
+st.title("어떤 분야가 좋을까?")
 
-
-
-# 페이지 설정
+#페이지 설정
 st.set_page_config(page_title="대분류 관련 그래프 출력", layout="wide")
 st.title("📊 업종대분류 관련 정보")
 st.markdown("이 페이지에서는 업종대분류에 관련된 다양한 내용을 제공합니다.")
